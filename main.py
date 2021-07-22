@@ -74,12 +74,13 @@ def update_user(user_id: int, user: schemas.UserBase, db : Session=Depends(get_d
     return user
 
 
-
 # board CRUD
 
 @app.post('/user/{user_id}/boards/', response_model=schemas.Board, tags=["boards"])
 def create_board(user_id: int, board:schemas.BoardCreate, db: Session=Depends(get_db)):
-    # 있는 유저 id 인지 확인해야함 ######################
+    db_user = crud.get_user(db, user_id)
+    if not db_user:
+        raise HTTPException(status_code=403, detail="There's no user with the id#")
     return crud.create_board(db=db, board=board, writer_id=user_id)
 
 @app.get('/boards/{board_id}', response_model=schemas.Board, tags=["boards"])
@@ -106,3 +107,4 @@ def update_board(board_id: int, board: schemas.BoardCreate, db: Session= Depends
 @app.get('/users/{user_id}/boards/', response_model=List[schemas.Board], tags=['boards'])
 def read_boards_by_writer_id(user_id: int, db: Session = Depends(get_db)):
     return crud.get_boards_by_writer_id(db, writer_id=user_id)
+    

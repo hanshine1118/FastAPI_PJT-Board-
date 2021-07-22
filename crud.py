@@ -1,3 +1,4 @@
+import bcrypt
 from sqlalchemy.orm import Session
 from . import models, schemas
 from typing import Optional
@@ -5,15 +6,22 @@ from typing import Optional
 # 유저 - 가입, 조회, 정보 수정, 삭제
 # 게시판 - 게시판 생성,  조회(유저 id로 글 조회, 그냥 글 조회, 전체 글 조회), 수정, 삭제
 # pagenation으로 10개씩 게시판 조회
+# offset과 skip을 정해서 그값을 올려주면서 보내준다 ㅔpage변수에는 받을 때마다 count+=1
 
 
 # 유저
 def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 
+#로그인
+
+
+#회원가입
 def create_user(db: Session, user: schemas.UserCreate):
-    fake_hashed_passwrd = user.password + "hashed"
-    db_user = models.User(email = user.email, hashed_password = fake_hashed_passwrd)
+    # 비밀번호에 해쉬화?-> bcrypt
+    hash_password = bcrypt.hashpw(user.password.encode("utf-8"), bcrypt.gensalt())
+    print(hash_password)
+    db_user = models.User(email = user.email, hashed_password = hash_password)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -58,7 +66,7 @@ def delete_board(db: Session, board_id: int):
     board = db.query(models.Board).filter(models.Board.id == board_id).first()
     db.delete(board)
     db.commit()
-    # db.refresh(board)
+    db.refresh(board)
     return board
 
 def update_baord(
