@@ -1,3 +1,7 @@
+from datetime import datetime, timedelta
+
+from passlib.context import CryptContext
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import bcrypt
 from sqlalchemy.orm import Session
 from . import models, schemas
@@ -8,20 +12,22 @@ from typing import Optional
 # pagenation으로 10개씩 게시판 조회
 # offset과 skip을 정해서 그값을 올려주면서 보내준다 ㅔpage변수에는 받을 때마다 count+=1
 
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
 
 # 유저
 def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 
-#로그인
-
 
 #회원가입
 def create_user(db: Session, user: schemas.UserCreate):
-    # 비밀번호에 해쉬화?-> bcrypt
-    hash_password = bcrypt.hashpw(user.password.encode("utf-8"), bcrypt.gensalt())
-    print(hash_password)
-    db_user = models.User(email = user.email, hashed_password = hash_password)
+    hashed_password = get_password_hash(user.password)
+    print(hashed_password)
+
+    db_user = models.User(email = user.email, hashed_password = hashed_password)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -29,6 +35,10 @@ def create_user(db: Session, user: schemas.UserCreate):
 
 def get_users(db: Session):
     return db.query(models.User).offset(0).limit(10).all()
+
+def get_id_by_username(db: Session, email: str):
+    user = db.query(models.User).filter(models.User.email == email).first()
+    return user.id
 
 def get_user(db: Session, user_id: int):
     return db.query(models.User).filter(models.User.id == user_id).first()

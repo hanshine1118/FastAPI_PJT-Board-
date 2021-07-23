@@ -1,10 +1,11 @@
 from typing import List, Optional
-
+from datetime import datetime, timedelta
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import false, true
-
-
+from passlib.context import CryptContext
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from jose import JWTError, jwt
 from . import models, schemas, crud
 from .database import SessionLocal, engine
 
@@ -40,6 +41,45 @@ def isBoardExist(db, board_id):
     if not db_board:
         return False
     return True
+# create_access_token(data=UserToken.from_orm(new_user).dict(exclude={'pw', 'marketing_agree'}),)}")
+# 로그인 
+# 인증 /인가
+SECRET_KEY = "6985b199884155d9ddd7b44d67f15ffe450fcacf2035c80e7fb4721ad2325240"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+
+#로그인
+
+def authenticate_user(email: str, password: str, db: Session = Depends(get_db)):
+    user_id = crud.get_id_by_username(db, email)
+    user = crud.get_user(db, user_id)
+    if not user:
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
+    return user
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=30)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+
 
 # user CRUD
 
