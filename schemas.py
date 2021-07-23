@@ -1,8 +1,29 @@
+from my_app.database import Base
 from typing import List, Optional
 
 from datetime import datetime
 from pydantic import BaseModel
 
+# Comments
+
+class CommentBase(BaseModel):
+    context: str
+
+
+class CommentCreate(CommentBase):
+    pass
+
+
+class Comment(CommentBase):
+    id: int
+    created_at: datetime
+    board_id: int
+    
+    class Config:
+        orm_mode = True
+
+
+# 게시글
 
 class BoardBase(BaseModel):
     title: str
@@ -16,11 +37,12 @@ class Board(BoardBase):
     id: int
     created_at: datetime
     writer_id: int
-    
+    comments: List[Comment] = []
+
     class Config:
         orm_mode = True
 
-
+# 유저
 class UserBase(BaseModel):
     email: str
 
@@ -42,4 +64,6 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+
+
 

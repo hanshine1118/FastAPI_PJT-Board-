@@ -15,9 +15,12 @@ tags_metadata = [
     {
         "name": "users",
         "description" : "users CRUD"
-    },{
+    }, {
         "name": "boards",
         "description" : "boards CRUD"
+    }, {
+        "name": "comments",
+        "description": "comments CRUD"
     }
 ]
 
@@ -41,6 +44,14 @@ def isBoardExist(db, board_id):
     if not db_board:
         return False
     return True
+
+def isUserExist(db, user_id):
+    # id 값으로 해당 유저가 있는지 검사
+    db_user = crud.get_user(db, user_id)
+    if not db_user:
+        return False
+    return True
+
 # create_access_token(data=UserToken.from_orm(new_user).dict(exclude={'pw', 'marketing_agree'}),)}")
 # 로그인 
 # 인증 /인가
@@ -48,7 +59,7 @@ SECRET_KEY = "6985b199884155d9ddd7b44d67f15ffe450fcacf2035c80e7fb4721ad2325240"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
@@ -125,7 +136,9 @@ def create_board(user_id: int, board:schemas.BoardCreate, db: Session=Depends(ge
 
 @app.get('/boards/{board_id}', response_model=schemas.Board, tags=["boards"])
 def read_board(board_id: int, db: Session= Depends(get_db)):
-    return crud.get_board(db, board_id)
+    db_board = crud.get_board(db, board_id)
+    if not db_board:
+        raise HTTPException(status_code=403, detail="There's no board")
 
 @app.get('/boards/', response_model=List[schemas.Board], tags=["boards"])
 def read_boards(db: Session=Depends(get_db)):
@@ -147,4 +160,31 @@ def update_board(board_id: int, board: schemas.BoardCreate, db: Session= Depends
 @app.get('/users/{user_id}/boards/', response_model=List[schemas.Board], tags=['boards'])
 def read_boards_by_writer_id(user_id: int, db: Session = Depends(get_db)):
     return crud.get_boards_by_writer_id(db, writer_id=user_id)
-    
+
+
+# 댓글
+
+@app.post('/boards/{board_id}/comment/', response_model=schemas.Comment, tags=["comments"])
+def create_comment(board_id: int, comment: schemas.CommentCreate, db: Session=Depends(get_db)):
+    db_board = crud.get_board(db, board_id)
+    if not db_board:
+        raise HTTPException(status_code=403, detail="There's no board with #")
+    return crud.create_comment(db, comment, board_id)
+
+@app.get('/comments/', response_model=List[schemas.Comment], tags=['comments'])
+def read_comments(db: Session=Depends(get_db)):
+    return crud.get_comments(db)
+
+@app.delete('/comments/{comment_id}', response_model=schemas.Comment, tags=['comments'])
+async def delete_comment(comment_id: int, db : Session=Depends(get_db)):
+    db_comment = crud.get_comment(db, comment_id)
+    if not db_comment:
+        raise HTTPException(status_code=403, detail="There's no comment to delete")
+    return crud.delete_comment(db, comment_id)
+
+@app.put('/comments/update/{comment_id}', response_model=schemas.Comment, tags=['comments'])
+async def update_comment(comment: schemas.CommentCreate, comment_id = int, db: Session=Depends(get_db)):
+    db_comment = crud.get_comment(db, comment_id)
+    if not db_comment:
+        raise HTTPException(status_code=403, detail="There's no comment to update")
+    return crud.update_comment(db, comment, comment_id)
